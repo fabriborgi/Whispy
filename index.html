@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0E0F12"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="description" content="Whispy — Tour guide radio. Scan QR to listen instantly."/>
+<title>Whispy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ground: #0E0F12; --surface: #17181C; --surface-alt: #1F2126;
+  --line: rgba(244,243,238,0.08); --line-strong: rgba(244,243,238,0.18);
+  --fg: #F4F3EE; --fg-muted: #B5B7BD; --fg-faint: #7A7D85;
+  --accent: #6DE58B; --accent-bg: rgba(109,229,139,0.14);
+  --warn: #FFB547; --warn-bg: rgba(255,181,71,0.14);
+  --danger: #FF5D5D; --danger-bg: rgba(255,93,93,0.14);
+  --sans: 'Geist', ui-sans-serif, -apple-system, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --sat: env(safe-area-inset-top,0px); --sab: env(safe-area-inset-bottom,0px);
+}
+html,body { min-height:100vh; background:var(--ground); color:var(--fg); font-family:var(--sans); -webkit-font-smoothing:antialiased; overscroll-behavior:none; }
+#root { min-height:100vh; display:flex; flex-direction:column; }
+button { font-family:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+input { font-family:inherit; }
+input[type=range] { -webkit-appearance:none; appearance:none; background:transparent; width:100%; cursor:pointer; }
+input[type=range]::-webkit-slider-runnable-track { height:4px; background:var(--surface-alt); border-radius:2px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:22px; height:22px; border-radius:50%; background:var(--fg); margin-top:-9px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+input[type=text], input[type=password] { width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line); background:var(--surface); color:var(--fg); font-size:16px; outline:none; transition:border-color 150ms; }
+input[type=text]:focus, input[type=password]:focus { border-color:var(--accent); }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.45;transform:scale(.85)} }
+@keyframes ring { 0%{transform:scale(.55);opacity:.7} 100%{transform:scale(1.5);opacity:0} }
+@keyframes fadein { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin { to{transform:rotate(360deg)} }
+.ani { animation:fadein .35s ease both; }
+.screen { flex:1; display:flex; flex-direction:column; padding-top:var(--sat); max-width:480px; margin:0 auto; width:100%; min-height:100vh; }
+.topbar { display:flex; align-items:center; gap:12px; padding:14px 20px 10px; min-height:56px; position:sticky; top:0; z-index:10; background:rgba(14,15,18,.88); border-bottom:1px solid var(--line); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+.topbar-title { flex:1; text-align:center; font-size:16px; font-weight:600; letter-spacing:-.01em; }
+.topbar-sub { font-family:var(--mono); font-size:10px; color:var(--fg-muted); letter-spacing:.12em; text-transform:uppercase; margin-top:2px; }
+.topbar-slot { width:36px; display:flex; justify-content:center; align-items:center; }
+.icon-btn { width:36px; height:36px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:transparent; color:var(--fg); transition:background 120ms; }
+.icon-btn:active { background:var(--surface); }
+.content { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+.card-pad { padding:16px; }
+.label { font-family:var(--mono); font-size:10px; color:var(--fg-muted); letter-spacing:.14em; text-transform:uppercase; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:999px; font-family:var(--mono); font-size:10px; letter-spacing:.08em; font-weight:500; text-transform:uppercase; }
+.pill-live { background:var(--accent-bg); color:var(--accent); }
+.pill-warn { background:var(--warn-bg); color:var(--warn); }
+.pill-danger { background:var(--danger-bg); color:var(--danger); }
+.pill-neutral { background:transparent; color:var(--fg-muted); border:1px solid var(--line); }
+.pill-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+.pill-live .pill-dot { animation:pulse 1.4s ease-in-out infinite; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border-radius:14px; font-weight:500; transition:opacity 90ms,transform 70ms; white-space:nowrap; }
+.btn:active:not(:disabled) { opacity:.8; transform:scale(.97); }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn-lg { padding:14px 20px; font-size:16px; width:100%; }
+.btn-md { padding:10px 16px; font-size:14px; }
+.btn-sm { padding:7px 12px; font-size:13px; }
+.btn-primary { background:var(--fg); color:var(--ground); }
+.btn-accent  { background:var(--accent); color:#06120A; }
+.btn-ghost   { background:transparent; color:var(--fg); border:1px solid var(--line-strong); }
+.btn-danger  { background:var(--danger); color:#fff; }
+.btn-soft    { background:var(--surface-alt); color:var(--fg); }
+.segment { display:flex; padding:3px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.seg-opt { flex:1; padding:8px 4px; border-radius:10px; font-size:13px; font-weight:500; transition:all 120ms; color:var(--fg); background:transparent; }
+.seg-opt.active { background:var(--fg); color:var(--ground); }
+.switch { position:relative; width:44px; height:26px; border-radius:999px; border:1px solid var(--line-strong); background:var(--surface-alt); transition:all 160ms; flex-shrink:0; }
+.switch.on { background:var(--accent); border-color:var(--accent); }
+.switch-thumb { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--fg); transition:left 160ms, background 160ms; }
+.switch.on .switch-thumb { left:20px; background:#06120A; }
+.vu-wrap { display:flex; gap:2px; align-items:center; width:100%; }
+.vu-seg { border-radius:1px; transition:background 55ms linear; }
+.wave-wrap { display:flex; align-items:center; gap:2px; width:100%; }
+.wave-bar { width:2px; border-radius:1px; }
+.row { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line); color:var(--fg); font-size:15px; width:100%; }
+.row:last-child { border-bottom:none; }
+.bottom-bar { padding:12px 20px; padding-bottom:calc(12px + var(--sab)); border-top:1px solid var(--line); background:var(--surface); position:sticky; bottom:0; }
+.field { display:flex; flex-direction:column; gap:8px; }
+.field-header { display:flex; justify-content:space-between; align-items:baseline; }
+.info-cell { padding:10px 12px; background:var(--ground); border-radius:10px; }
+.info-label { color:var(--fg-faint); font-size:9px; letter-spacing:.14em; text-transform:uppercase; font-family:var(--mono); }
+.info-value { color:var(--fg); font-family:var(--mono); font-size:12px; margin-top:2px; word-break:break-all; }
+.stat-cell { padding:10px 12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.stat-label { font-family:var(--mono); font-size:9px; color:var(--fg-muted); letter-spacing:.14em; text-transform:uppercase; }
+.stat-value { font-family:var(--mono); font-size:22px; font-weight:500; letter-spacing:-.02em; margin-top:4px; }
+.stat-unit { color:var(--fg-muted); font-size:13px; }
+.gap-8  { display:flex; flex-direction:column; gap:8px; }
+.gap-12 { display:flex; flex-direction:column; gap:12px; }
+.gap-16 { display:flex; flex-direction:column; gap:16px; }
+.gap-20 { display:flex; flex-direction:column; gap:20px; }
+.row-flex { display:flex; align-items:center; gap:10px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.center { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; }
+.mono { font-family:var(--mono); }
+.muted { color:var(--fg-muted); }
+.faint { color:var(--fg-faint); }
+.accent { color:var(--accent); }
+.spinner { width:32px; height:32px; border:2.5px solid var(--line-strong); border-top-color:var(--accent); border-radius:50%; animation:spin .9s linear infinite; }
+.hero { width:100%; height:200px; border:1px solid var(--line); border-radius:20px; background:var(--surface); position:relative; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- PeerJS for WebRTC signaling abstraction -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── URL params ───────────────────────────────────────────────────
+const _params      = new URLSearchParams(window.location.search);
+const JOIN_PEER_ID = _params.get('join');   // guide's PeerJS ID encoded in QR
+const IS_TOURIST   = !!JOIN_PEER_ID;
+const BROWSER_LANG = (navigator.language || 'en').startsWith('it') ? 'it' : 'en';
+
+// ICE servers: Google STUN (free) + Cloudflare STUN (free)
+// On the same local Wi-Fi (guide's hotspot), WebRTC uses local ICE candidates — TURN not needed.
+// For cross-internet connections add a free TURN from metered.ca if needed.
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
+// PeerJS server config. Default: PeerJS cloud (fine for prototyping / small tours).
+// For self-hosting set window.WHISPY_PEER_HOST = 'https://your-server.onrender.com'
+// before loading this script.
+function peerCfg() {
+  const h = window.WHISPY_PEER_HOST;
+  if (h) {
+    const u = new URL(h);
+    return { host: u.hostname, port: u.port || 443, path: '/', secure: u.protocol === 'https:', config: { iceServers: ICE_SERVERS } };
+  }
+  return { config: { iceServers: ICE_SERVERS } }; // PeerJS cloud default
+}
+
+// ─── i18n ─────────────────────────────────────────────────────────
+const STR = {
+  en: {
+    landing_title: 'The radio for\nmodern tours.',
+    landing_sub: 'Broadcast to your group over local Wi-Fi.\nNo internet required. No dropouts.',
+    be_guide: "I'm a guide", be_tourist: "I'm a tourist",
+    ct_title: 'New tour', ct_name: 'Tour name', ct_name_ph: 'Vatican Museums — Afternoon',
+    ct_lang: 'Tour language', ct_capacity: 'Expected group size',
+    ct_access: 'Access code', ct_access_sub: 'Rotating 4-digit code. Leave off for open tours.',
+    ct_start: 'Start broadcasting',
+    qr_title: 'Scan to join', qr_sub: 'Show this to your group or project it on screen.',
+    qr_network: 'Network', qr_pwd: 'Password', qr_open: 'Open', qr_listeners: 'listening',
+    qr_enter: 'Enter broadcast',
+    bc_on_air: 'ON AIR', bc_muted: 'MUTED',
+    bc_mute: 'Mute', bc_unmute: 'Un-mute',
+    bc_record: 'Record', bc_rec_on: 'Recording',
+    bc_listeners: 'Listeners', bc_latency: 'Latency',
+    bc_bitrate: 'Bitrate', bc_packet: 'Packet loss', bc_end: 'End tour',
+    ls_title: 'Listeners',
+    au_title: 'Audio', au_input: 'Input', au_codec: 'Codec',
+    au_bitrate: 'Bitrate', au_noise: 'Noise suppression', au_agc: 'Auto-gain',
+    au_buffer: 'Jitter buffer', au_buffer_sub: 'Higher = more stable, more delay.',
+    rec_title: 'Recordings',
+    his_title: 'Tours', his_new: 'New tour',
+    ts_title: 'Join tour', ts_sub: "Point your camera at the guide's QR code to join instantly.",
+    ts_scan: 'Scan QR', ts_manual: 'Enter code manually',
+    ts_setup: 'Before you start', ts_headset: 'Use headphones for best quality.',
+    ts_lang: 'Listening language', ts_vol: 'Volume', ts_ready: "I'm ready — start listening",
+    ts_joining: 'Joining tour…', ts_step1: 'Connecting to network',
+    ts_step2: 'Negotiating audio stream', ts_step3: 'Buffering',
+    ts_guide: 'Your guide', ts_leave: 'Leave tour',
+    ts_lost: 'Connection lost', ts_lost_sub: "Move closer to your guide. We'll reconnect automatically.",
+    ts_retry: 'Retry', ts_tap: 'Tap to start audio',
+    ts_about: 'About this tour', ts_guide_n: 'Guide', ts_started: 'Started',
+    ts_lang_lbl: 'Broadcasting in', ts_stops: 'Stops',
+    strong: 'STRONG', weak: 'WEAK', no_signal: 'NO SIGNAL',
+    mic_denied: 'Microphone access denied. Please allow microphone in browser settings.',
+    not_found: 'Tour not found. Make sure the guide is broadcasting and try again.',
+    peer_error: 'Connection error. Check your internet and retry.',
+    copy: 'Copy link', copied: 'Copied!',
+  },
+  it: {
+    landing_title: 'La radio per\nle guide moderne.',
+    landing_sub: 'Trasmetti al tuo gruppo via Wi-Fi locale.\nSenza internet. Senza interruzioni.',
+    be_guide: 'Sono una guida', be_tourist: 'Sono un turista',
+    ct_title: 'Nuovo tour', ct_name: 'Nome del tour', ct_name_ph: 'Musei Vaticani — Pomeriggio',
+    ct_lang: 'Lingua del tour', ct_capacity: 'Dimensione del gruppo',
+    ct_access: 'Codice di accesso', ct_access_sub: 'Codice rotante. Lascialo spento per tour aperti.',
+    ct_start: 'Avvia trasmissione',
+    qr_title: 'Scansiona per unirti', qr_sub: 'Mostra al gruppo o proietta su uno schermo.',
+    qr_network: 'Rete', qr_pwd: 'Password', qr_open: 'Aperto', qr_listeners: 'in ascolto',
+    qr_enter: 'Entra in trasmissione',
+    bc_on_air: 'IN ONDA', bc_muted: 'MUTO',
+    bc_mute: 'Muto', bc_unmute: 'Attiva',
+    bc_record: 'Registra', bc_rec_on: 'In registrazione',
+    bc_listeners: 'Ascoltatori', bc_latency: 'Latenza',
+    bc_bitrate: 'Bitrate', bc_packet: 'Pacchetti persi', bc_end: 'Termina',
+    ls_title: 'Ascoltatori',
+    au_title: 'Audio', au_input: 'Ingresso', au_codec: 'Codec',
+    au_bitrate: 'Bitrate', au_noise: 'Soppressione rumore', au_agc: 'Auto-gain',
+    au_buffer: 'Buffer jitter', au_buffer_sub: 'Più alto = più stabile, più ritardo.',
+    rec_title: 'Registrazioni',
+    his_title: 'Tour', his_new: 'Nuovo tour',
+    ts_title: 'Unisciti al tour', ts_sub: 'Punta la fotocamera sul QR della guida per unirti immediatamente.',
+    ts_scan: 'Scansiona QR', ts_manual: 'Inserisci codice',
+    ts_setup: 'Prima di iniziare', ts_headset: 'Usa le cuffie per la migliore qualità.',
+    ts_lang: 'Lingua di ascolto', ts_vol: 'Volume', ts_ready: 'Sono pronto — inizia ad ascoltare',
+    ts_joining: 'Unione al tour…', ts_step1: 'Connessione alla rete',
+    ts_step2: 'Negoziazione stream audio', ts_step3: 'Buffering',
+    ts_guide: 'La tua guida', ts_leave: 'Esci dal tour',
+    ts_lost: 'Connessione persa', ts_lost_sub: 'Avvicinati alla guida. Riconnetteremo automaticamente.',
+    ts_retry: 'Riprova', ts_tap: 'Tocca per avviare l\'audio',
+    ts_about: 'Su questo tour', ts_guide_n: 'Guida', ts_started: 'Avviato',
+    ts_lang_lbl: 'Trasmissione in', ts_stops: 'Tappe',
+    strong: 'FORTE', weak: 'DEBOLE', no_signal: 'NESSUN SEGNALE',
+    mic_denied: 'Accesso microfono negato. Consenti il microfono nelle impostazioni del browser.',
+    not_found: 'Tour non trovato. Assicurati che la guida stia trasmettendo e riprova.',
+    peer_error: 'Errore di connessione. Controlla la rete e riprova.',
+    copy: 'Copia link', copied: 'Copiato!',
+  },
+};
+
+// ─── WebRTC: Guide peer ────────────────────────────────────────────
+// Guide creates a PeerJS peer. Tourists call the guide's peer ID.
+// Guide answers each incoming call with the microphone MediaStream.
+// Audio flows P2P — on the same local Wi-Fi (guide's hotspot) it
+// uses local ICE candidates directly, no relay cost.
+
+function useGuidePeer() {
+  const peerRef     = useRef(null);
+  const streamRef   = useRef(null);   // live microphone MediaStream
+  const callsRef    = useRef(new Map()); // peerId → MediaConnection
+  const analyserRef = useRef(null);
+  const rafRef      = useRef(null);
+  const recorderRef = useRef(null);
+  const chunksRef   = useRef([]);
+
+  const [peerId,    setPeerId]    = useState(null);
+  const [status,    setStatus]    = useState('idle'); // idle|requesting|connecting|live|error
+  const [listeners, setListeners] = useState(0);
+  const [level,     setLevel]     = useState(0);     // 0..1 audio level for VU meter
+  const [error,     setError]     = useState(null);
+  const [recording, setRecording] = useState(false);
+
+  const refreshCount = () => setListeners(callsRef.current.size);
+
+  const start = useCallback(async () => {
+    setStatus('requesting');
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 },
+        video: false,
+      });
+      streamRef.current = stream;
+
+      // Web Audio analyser for the VU meter
+      const ctx      = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.6;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      analyserRef.current = analyser;
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        analyser.getByteFrequencyData(buf);
+        setLevel(buf.reduce((a, b) => a + b, 0) / buf.length / 255);
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+
+      setStatus('connecting');
+
+      // Unique peer ID for this broadcast session
+      const id   = 'w-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+      const peer = new Peer(id, peerCfg());
+      peerRef.current = peer;
+
+      peer.on('open', () => { setPeerId(id); setStatus('live'); });
+
+      // Each tourist calls in → answer with our mic stream
+      peer.on('call', call => {
+        call.answer(streamRef.current);
+        callsRef.current.set(call.peer, call);
+        refreshCount();
+        call.on('close', () => { callsRef.current.delete(call.peer); refreshCount(); });
+        call.on('error', () => { callsRef.current.delete(call.peer); refreshCount(); });
+      });
+
+      peer.on('error',       err => { setError(err.type || String(err)); setStatus('error'); });
+      peer.on('disconnected', ()  => { try { peer.reconnect(); } catch (_) {} });
+
+    } catch (e) {
+      setError(e.name === 'NotAllowedError' ? 'mic-denied' : e.message);
+      setStatus('error');
+    }
+  }, []);
+
+  const stop = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    peerRef.current?.destroy();
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    callsRef.current.clear();
+    setPeerId(null); setStatus('idle'); setListeners(0); setLevel(0);
+  }, []);
+
+  const setMuted = useCallback(muted => {
+    streamRef.current?.getAudioTracks().forEach(t => { t.enabled = !muted; });
+  }, []);
+
+  // Local recording with MediaRecorder → download as WebM/Opus file
+  const toggleRecording = useCallback(() => {
+    if (!streamRef.current) return;
+    if (recorderRef.current && recorderRef.current.state === 'recording') {
+      recorderRef.current.stop();
+      return;
+    }
+    chunksRef.current = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    const rec  = new MediaRecorder(streamRef.current, { mimeType: mime, audioBitsPerSecond: 64000 });
+    recorderRef.current = rec;
+    rec.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: mime });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `whispy-${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setRecording(false);
+    };
+    rec.start(500); // collect chunks every 500 ms
+    setRecording(true);
+  }, []);
+
+  return { peerId, status, listeners, level, error, recording, start, stop, setMuted, toggleRecording };
+}
+
+// ─── WebRTC: Tourist peer ─────────────────────────────────────────
+// Tourist creates a PeerJS peer, calls the guide's peer ID with a
+// silent stream (listen-only), and plays back the incoming audio.
+
+function useTouristPeer(guidePeerId) {
+  const peerRef  = useRef(null);
+  const audioRef = useRef(null);  // <Audio> element for playback
+  const actxRef  = useRef(null);
+
+  const [status,   setStatus]   = useState('idle'); // idle|connecting|live|lost|not-found
+  const [needsTap, setNeedsTap] = useState(false);  // iOS autoplay gate
+
+  const join = useCallback(async () => {
+    if (!guidePeerId) { setStatus('not-found'); return; }
+    setStatus('connecting');
+    try {
+      // Create a zero-gain silent stream so we can initiate a WebRTC call.
+      // The guide answers with the mic stream → we hear them, they don't hear us.
+      const actx = new (window.AudioContext || window.webkitAudioContext)();
+      actxRef.current = actx;
+      const dest = actx.createMediaStreamDestination();
+      const osc  = actx.createOscillator();
+      const g    = actx.createGain();
+      g.gain.value = 0;
+      osc.connect(g); g.connect(dest); osc.start();
+
+      const peer = new Peer(peerCfg());
+      peerRef.current = peer;
+
+      await new Promise((res, rej) => {
+        const t = setTimeout(() => rej(new Error('signaling-timeout')), 12000);
+        peer.on('open', () => { clearTimeout(t); res(); });
+        peer.on('error', e => { clearTimeout(t); rej(e); });
+      });
+
+      const call = peer.call(guidePeerId, dest.stream);
+      if (!call) throw new Error('no-stream');
+
+      await new Promise((res, rej) => {
+        const t = setTimeout(() => rej(new Error('stream-timeout')), 15000);
+        call.on('stream', remoteStream => {
+          clearTimeout(t);
+          // Reuse or create the Audio element
+          if (!audioRef.current) audioRef.current = new Audio();
+          const audio = audioRef.current;
+          audio.srcObject = remoteStream;
+          // Try immediate play (needs prior user gesture — the "I'm ready" button)
+          audio.play().then(() => {
+            setStatus('live'); setNeedsTap(false); res();
+          }).catch(() => {
+            // Autoplay blocked (iOS): show tap-to-play prompt
+            setStatus('live'); setNeedsTap(true); res();
+          });
+        });
+        call.on('close', () => { clearTimeout(t); setStatus('lost'); });
+        call.on('error', () => { clearTimeout(t); rej(new Error('call-error')); });
+      });
+
+    } catch (e) {
+      peerRef.current?.destroy();
+      const msg = e.message || '';
+      setStatus(msg.includes('stream-timeout') || msg.includes('no-stream') ? 'not-found' : 'lost');
+    }
+  }, [guidePeerId]);
+
+  const unlockAudio = useCallback(() => {
+    audioRef.current?.play().then(() => setNeedsTap(false)).catch(() => {});
+  }, []);
+
+  const setVolume = useCallback(v => {
+    if (audioRef.current) audioRef.current.volume = v / 100;
+  }, []);
+
+  const leave = useCallback(() => {
+    peerRef.current?.destroy();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.srcObject = null; }
+    actxRef.current?.close();
+    setStatus('idle');
+  }, []);
+
+  return { status, needsTap, join, leave, setVolume, unlockAudio };
+}
+
+// ─── Primitives ───────────────────────────────────────────────────
+
+function Icon({ name, size = 20, color = 'currentColor', sw = 1.6, style }) {
+  const p = { width:size, height:size, viewBox:'0 0 24 24', fill:'none', stroke:color, strokeWidth:sw, strokeLinecap:'round', strokeLinejoin:'round', style };
+  const paths = {
+    mic:      <><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></>,
+    micOff:   <><path d="M3 3l18 18"/><path d="M9 9v2a3 3 0 0 0 5 2.2"/><path d="M15 11.5V6a3 3 0 0 0-5.9-.7"/><path d="M5 11a7 7 0 0 0 11.8 5"/><path d="M12 18v3"/></>,
+    record:   <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>,
+    wifi:     <><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M5 12.3a10 10 0 0 1 14 0"/><path d="M8.5 15.8a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></>,
+    wifiOff:  <><path d="M3 3l18 18"/><path d="M2 8.8a15 15 0 0 1 6.5-3.7"/><path d="M19.5 13a10 10 0 0 0-3-1.6"/><path d="M8.5 15.8a5 5 0 0 1 6-.7"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/></>,
+    qr:       <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v3M14 19h3M19 19h2v2"/></>,
+    scan:     <><path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M20 8V5a1 1 0 0 0-1-1h-3"/><path d="M4 16v3a1 1 0 0 0 1 1h3"/><path d="M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16"/></>,
+    people:   <><circle cx="9" cy="9" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="10" r="2.5"/><path d="M15 20c0-2 2-3.5 4-3.5s2 .8 2 1.5"/></>,
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></>,
+    chevL:    <path d="M15 6l-6 6 6 6"/>,
+    chevR:    <path d="M9 6l6 6-6 6"/>,
+    x:        <><path d="M6 6l12 12"/><path d="M18 6l-12 12"/></>,
+    play:     <path d="M7 5l12 7-12 7z" fill="currentColor"/>,
+    pause:    <><rect x="6" y="5" width="4" height="14" fill="currentColor" stroke="none"/><rect x="14" y="5" width="4" height="14" fill="currentColor" stroke="none"/></>,
+    signal:   <><path d="M4 20v-4"/><path d="M9 20v-8"/><path d="M14 20V8"/><path d="M19 20V4"/></>,
+    headset:  <><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></>,
+    lock:     <><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></>,
+    clock:    <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
+    arrowR:   <><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></>,
+    check:    <path d="M5 12l5 5 9-11"/>,
+    share:    <><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></>,
+    wave:     <><path d="M2 12h2"/><path d="M6 8v8"/><path d="M10 5v14"/><path d="M14 8v8"/><path d="M18 10v4"/><path d="M22 12h-2"/></>,
+    info:     <><circle cx="12" cy="12" r="9"/><path d="M12 10v6"/><circle cx="12" cy="7.5" r=".5" fill="currentColor"/></>,
+    copy:     <><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>,
+    download: <><path d="M12 3v13"/><path d="M7 12l5 5 5-5"/><path d="M3 20h18"/></>,
+    volume:   <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></>,
+  };
+  return <svg {...p}>{paths[name] || null}</svg>;
+}
+
+function WhispyMark({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size * 1.4} height={size} viewBox="0 0 28 20" fill="none">
+      {[4, 9, 14, 19, 24].map((x, i) => {
+        const h = [6, 12, 18, 12, 6][i];
+        return <rect key={i} x={x - 1.2} y={10 - h / 2} width={2.4} height={h} rx={1.2} fill={color}/>;
+      })}
+    </svg>
+  );
+}
+
+function Logo({ size = 18 }) {
+  return (
+    <div style={{ display:'inline-flex', alignItems:'center', gap:8, fontWeight:600, fontSize:size, letterSpacing:'-.02em', color:'var(--fg)' }}>
+      <WhispyMark size={size} color="var(--fg)"/>
+      <span>whispy<span style={{ color:'var(--accent)' }}>.</span></span>
+    </div>
+  );
+}
+
+// Deterministic QR code visual (no external library)
+function QRCode({ size = 210, seed = 'whispy', color = '#0E0F12', bg = '#F4F3EE' }) {
+  const grid = 25; const cell = size / grid;
+  const hash = (i, j) => { const s = `${seed}-${i}-${j}`; let h = 0; for (let k = 0; k < s.length; k++) h = (h * 31 + s.charCodeAt(k)) | 0; return (h ^ (h >> 13)) & 1; };
+  const isFinder = (i, j) => (i < 7 && j < 7) || (i < 7 && j >= grid - 7) || (i >= grid - 7 && j < 7);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display:'block', borderRadius:4 }}>
+      <rect width={size} height={size} fill={bg}/>
+      {Array.from({ length: grid }).map((_, i) => Array.from({ length: grid }).map((__, j) => {
+        if (isFinder(i, j) || !hash(i, j)) return null;
+        return <rect key={`${i}-${j}`} x={j*cell+1} y={i*cell+1} width={cell-2} height={cell-2} fill={color} rx={1}/>;
+      }))}
+      {[[0,0],[0,grid-7],[grid-7,0]].map(([r, c], k) => (
+        <g key={k}>
+          <rect x={c*cell} y={r*cell} width={7*cell} height={7*cell} fill={color} rx={cell}/>
+          <rect x={c*cell+cell} y={r*cell+cell} width={5*cell} height={5*cell} fill={bg} rx={cell*.6}/>
+          <rect x={c*cell+2*cell} y={r*cell+2*cell} width={3*cell} height={3*cell} fill={color} rx={cell*.4}/>
+        </g>
+      ))}
+      <rect x={size/2-cell*2.2} y={size/2-cell*2.2} width={cell*4.4} height={cell*4.4} rx={cell*1.1} fill={bg}/>
+      <g transform={`translate(${size/2-cell*1.6} ${size/2-cell*0.4})`}>
+        {[0.2,0.55,1.0,0.55,0.2].map((h, i) => (
+          <rect key={i} x={i*cell*.64} y={-h*cell} width={cell*.38} height={h*2*cell} rx={cell*.19} fill={color}/>
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+function WaveformBars({ count = 32, height = 28, seed = 7, color = '#6DE58B', live = false }) {
+  const rng = i => { const x = Math.sin((i + seed) * 12.9898) * 43758.5453; return x - Math.floor(x); };
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    if (!live) return;
+    let raf;
+    const tick = () => { setT(v => v + 1); raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [live]);
+  return (
+    <div className="wave-wrap" style={{ height }}>
+      {Array.from({ length: count }).map((_, i) => {
+        let base = 0.25 + rng(i) * 0.75;
+        if (live) base = 0.2 + 0.8 * Math.abs(Math.sin(t / 6 + i * 0.7 + rng(i) * 6));
+        return <div key={i} className="wave-bar" style={{ height:`${base*100}%`, background:color, opacity:0.55+base*.45 }}/>;
+      })}
+    </div>
+  );
+}
+
+function LevelMeter({ level = 0.6, segments = 28, height = 10, color }) {
+  const lit = Math.round(segments * level);
+  const t1 = Math.round(segments * 0.6), t2 = Math.round(segments * 0.85);
+  const base = color || 'var(--accent)';
+  return (
+    <div className="vu-wrap" style={{ height }}>
+      {Array.from({ length: segments }).map((_, i) => {
+        const isLit = i < lit;
+        const c = i >= t2 ? 'var(--danger)' : i >= t1 ? 'var(--warn)' : base;
+        return <div key={i} className="vu-seg" style={{ background:isLit?c:'rgba(127,127,127,.18)', width:`${100/segments}%`, height:'100%' }}/>;
+      })}
+    </div>
+  );
+}
+
+function Pill({ kind = 'neutral', dot = true, children }) {
+  return <span className={`pill pill-${kind}`}>{dot && <span className="pill-dot"/>}{children}</span>;
+}
+
+function Switch({ on, onChange }) {
+  return <button className={`switch ${on?'on':''}`} onClick={() => onChange(!on)}><span className="switch-thumb"/></button>;
+}
+
+function Segment({ value, options, onChange }) {
+  return (
+    <div className="segment">
+      {options.map(([val, label]) => (
+        <button key={val} className={`seg-opt ${value===val?'active':''}`} onClick={() => onChange(val)}>{label}</button>
+      ))}
+    </div>
+  );
+}
+
+function IconBtn({ name, onClick, size = 20 }) {
+  return <button className="icon-btn" onClick={onClick}><Icon name={name} size={size}/></button>;
+}
+
+function TopBar({ title, subtitle, left, right }) {
+  return (
+    <div className="topbar">
+      <div className="topbar-slot" style={{ justifyContent:'flex-start' }}>{left}</div>
+      <div style={{ flex:1, textAlign:'center' }}>
+        {title && <div className="topbar-title">{title}</div>}
+        {subtitle && <div className="topbar-sub">{subtitle}</div>}
+      </div>
+      <div className="topbar-slot" style={{ justifyContent:'flex-end' }}>{right}</div>
+    </div>
+  );
+}
+
+function Field({ label, value, children }) {
+  return (
+    <div className="field">
+      <div className="field-header">
+        <span className="label">{label}</span>
+        {value !== undefined && <span className="mono" style={{ fontSize:11 }}>{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InfoCell({ label, value }) {
+  return <div className="info-cell"><div className="info-label">{label}</div><div className="info-value">{value}</div></div>;
+}
+
+function StatCell({ label, value, unit, onClick }) {
+  return (
+    <div className="stat-cell" onClick={onClick} style={{ cursor:onClick?'pointer':'default' }}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}{unit&&<span className="stat-unit"> {unit}</span>}</div>
+    </div>
+  );
+}
+
+function ToggleCard({ icon, label, sub, on, onChange, children }) {
+  return (
+    <div className="card card-pad gap-8">
+      <div className="row-flex">
+        <div style={{ width:32,height:32,borderRadius:10,background:'var(--surface-alt)',color:'var(--fg-muted)',display:'inline-flex',alignItems:'center',justifyContent:'center' }}>
+          <Icon name={icon} size={18}/>
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:14,fontWeight:500 }}>{label}</div>
+          <div style={{ fontSize:12,color:'var(--fg-muted)' }}>{sub}</div>
+        </div>
+        <Switch on={on} onChange={onChange}/>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CopyLinkBtn({ url, t }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  };
+  return (
+    <button className="btn btn-soft btn-md" onClick={copy} style={{ width:'100%' }}>
+      <Icon name="copy" size={16}/> {copied ? t.copied : t.copy}
+    </button>
+  );
+}
+
+// ─── Guide screens ────────────────────────────────────────────────
+
+function GuideLanding({ t, onGuide, onTourist, lang, setLang }) {
+  return (
+    <div className="screen ani">
+      <div style={{ padding:'28px 20px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <Logo size={20}/>
+        <button className="btn btn-soft btn-sm" style={{ fontFamily:'var(--mono)', fontSize:11 }}
+          onClick={() => setLang(l => l === 'en' ? 'it' : 'en')}>
+          {lang.toUpperCase()}
+        </button>
+      </div>
+      <div className="content" style={{ padding:'28px 20px 40px', display:'flex', flexDirection:'column' }}>
+        <div className="hero" style={{ marginBottom:28 }}>
+          <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(circle at 50% 65%, rgba(109,229,139,.12), transparent 60%)' }}/>
+          <svg width="100%" height="100%" viewBox="0 0 360 200" style={{ position:'absolute', inset:0 }}>
+            {[40,72,104,136,168].map((r,i) => (
+              <circle key={i} cx="180" cy="160" r={r} stroke="#6DE58B" strokeOpacity={.08+i*.035} strokeWidth="1" fill="none" strokeDasharray="2 5"/>
+            ))}
+            <circle cx="180" cy="160" r="10" fill="#6DE58B"/>
+            <circle cx="180" cy="160" r="18" fill="none" stroke="#6DE58B" strokeOpacity=".3"/>
+          </svg>
+          <div className="mono" style={{ position:'absolute', top:16, left:18, fontSize:10, color:'var(--fg-faint)', letterSpacing:'.12em' }}>LOCAL-FIRST · OPUS · WebRTC</div>
+          <div className="mono" style={{ position:'absolute', bottom:16, left:18, right:18, display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--fg-faint)', letterSpacing:'.1em' }}>
+            <span>P2P · NO RELAY</span><span>◉ LIVE</span>
+          </div>
+        </div>
+        <div style={{ fontSize:34,fontWeight:600,letterSpacing:'-.035em',lineHeight:1.08,whiteSpace:'pre-line',marginBottom:14 }}>{t.landing_title}</div>
+        <div style={{ fontSize:15,color:'var(--fg-muted)',lineHeight:1.5,whiteSpace:'pre-line',marginBottom:36 }}>{t.landing_sub}</div>
+        <div className="gap-12">
+          <button className="btn btn-accent btn-lg" onClick={onGuide}>{t.be_guide} <Icon name="arrowR" size={16}/></button>
+          <button className="btn btn-ghost btn-lg"  onClick={onTourist}>{t.be_tourist}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuideCreate({ t, tour, setTour, guide, onBack, onNext }) {
+  const [starting, setStarting] = useState(false);
+
+  const handleStart = async () => {
+    setStarting(true);
+    await guide.start();
+    // guide.status will update via hook; navigate on success
+  };
+
+  useEffect(() => {
+    if (guide.status === 'live')  onNext();
+    if (guide.status === 'error') setStarting(false);
+  }, [guide.status]);
+
+  return (
+    <div className="screen ani">
+      <TopBar title={t.ct_title} left={<IconBtn name="chevL" onClick={onBack}/>}/>
+      <div className="content" style={{ padding:'16px 20px 40px' }}>
+        <div className="gap-20">
+          <Field label={t.ct_name}>
+            <input type="text" value={tour.name} placeholder={t.ct_name_ph}
+              onChange={e => setTour(s => ({ ...s, name: e.target.value }))}/>
+          </Field>
+          <Field label={t.ct_lang}>
+            <Segment value={tour.lang}
+              options={[['it','Italiano'],['en','English'],['es','Español'],['fr','Français']]}
+              onChange={v => setTour(s => ({ ...s, lang: v }))}/>
+          </Field>
+          <Field label={t.ct_capacity} value={String(tour.capacity)}>
+            <input type="range" min="5" max="80" value={tour.capacity}
+              onChange={e => setTour(s => ({ ...s, capacity: +e.target.value }))} style={{ accentColor:'var(--accent)' }}/>
+            <div style={{ display:'flex',justifyContent:'space-between',fontFamily:'var(--mono)',fontSize:10,color:'var(--fg-faint)',marginTop:4 }}><span>5</span><span>80</span></div>
+          </Field>
+          <ToggleCard icon="lock" label={t.ct_access} sub={t.ct_access_sub}
+            on={tour.accessOn} onChange={v => setTour(s => ({ ...s, accessOn: v }))}>
+            {tour.accessOn && (
+              <div style={{ padding:'10px 12px',background:'var(--ground)',border:'1px solid var(--line)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                <span className="mono" style={{ fontSize:24,letterSpacing:'.18em' }}>{tour.accessCode}</span>
+                <span className="mono" style={{ fontSize:10,color:'var(--fg-muted)',letterSpacing:'.1em' }}>
+                  <Icon name="clock" size={11} style={{ marginRight:4,verticalAlign:-2 }}/>ROTATES 5m
+                </span>
+              </div>
+            )}
+          </ToggleCard>
+
+          {guide.error && (
+            <div style={{ padding:'12px 14px',borderRadius:12,background:'var(--danger-bg)',color:'var(--danger)',fontSize:13 }}>
+              {guide.error === 'mic-denied' ? t.mic_denied : t.peer_error}
+            </div>
+          )}
+
+          <button className="btn btn-accent btn-lg" onClick={handleStart} disabled={starting || !tour.name}>
+            {starting ? <><div className="spinner" style={{ width:18,height:18,borderWidth:2 }}/>{guide.status === 'requesting' ? 'Requesting mic…' : 'Connecting…'}</> : <>{t.ct_start} <Icon name="arrowR" size={16}/></>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuideQR({ t, tour, guide, onBack, onNext }) {
+  const baseUrl  = window.location.origin + window.location.pathname;
+  const joinUrl  = `${baseUrl}?join=${guide.peerId}`;
+  const qrSeed   = guide.peerId || 'loading';
+
+  if (!guide.peerId) {
+    return (
+      <div className="screen center ani"><div className="spinner"/></div>
+    );
+  }
+
+  return (
+    <div className="screen ani">
+      <TopBar title={t.qr_title} left={<IconBtn name="chevL" onClick={onBack}/>}/>
+      <div className="content" style={{ padding:'0 20px 40px' }}>
+        <p style={{ fontSize:13,color:'var(--fg-muted)',marginBottom:20,textAlign:'center' }}>{t.qr_sub}</p>
+
+        <div className="card card-pad gap-16">
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+            <Logo size={14}/>
+            <Pill kind="live">LIVE</Pill>
+          </div>
+          {/* QR renders the join URL visually. In production, use a real QR library like qrcode.js */}
+          <div style={{ display:'flex',justifyContent:'center' }}>
+            <div style={{ background:'#F4F3EE',borderRadius:16,padding:14,display:'inline-block' }}>
+              <QRCode size={200} seed={qrSeed} color="#0E0F12" bg="#F4F3EE"/>
+            </div>
+          </div>
+          <div className="grid-2">
+            <InfoCell label="Tour" value={tour.name.slice(0,22)}/>
+            <InfoCell label="Access" value={tour.accessOn ? tour.accessCode : t.qr_open}/>
+          </div>
+          {/* Full join URL — tourists can also tap the link directly */}
+          <div style={{ padding:'10px 12px',background:'var(--ground)',borderRadius:10 }}>
+            <div className="label" style={{ marginBottom:6 }}>Join link</div>
+            <a href={joinUrl} style={{ fontFamily:'var(--mono)',fontSize:10,color:'var(--fg-muted)',wordBreak:'break-all',textDecoration:'none' }}
+               onClick={e => e.preventDefault()}>{joinUrl}</a>
+          </div>
+          <CopyLinkBtn url={joinUrl} t={t}/>
+        </div>
+
+        <div style={{ marginTop:20,display:'flex',alignItems:'center',justifyContent:'center',gap:8,color:'var(--fg-muted)',fontSize:13 }}>
+          <span style={{ width:6,height:6,borderRadius:'50%',background:'var(--accent)',animation:'pulse 1.4s ease-in-out infinite' }}/>
+          <span className="mono"><b style={{ color:'var(--fg)' }}>{guide.listeners}</b> {t.qr_listeners}</span>
+        </div>
+
+        <button className="btn btn-primary btn-lg" style={{ marginTop:24 }} onClick={onNext}>
+          {t.qr_enter} <Icon name="arrowR" size={16}/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GuideBroadcast({ t, tour, guide, muted, setMuted, setScreen }) {
+  const onAir = !muted;
+  const sigColor = 'var(--accent)'; // real signal monitoring can use RTCPeerConnection.getStats
+
+  return (
+    <div className="screen ani">
+      <TopBar
+        left={<IconBtn name="chevL" onClick={() => setScreen('qr')}/>}
+        title={tour.name}
+        subtitle={`TOUR · ${tour.lang.toUpperCase()}`}
+        right={<IconBtn name="settings" onClick={() => setScreen('audio')}/>}/>
+      <div className="content">
+        {/* Status banner */}
+        <div style={{ margin:'8px 20px 0',padding:'10px 14px',borderRadius:14,display:'flex',alignItems:'center',gap:10,background:onAir?'var(--accent-bg)':'var(--surface-alt)',border:`1px solid ${onAir?'var(--accent)':'var(--line)'}` }}>
+          <Pill kind={onAir?'live':'neutral'}>{onAir ? t.bc_on_air : t.bc_muted}</Pill>
+          <span style={{ flex:1 }}/>
+          <span className="mono" style={{ fontSize:10,letterSpacing:'.1em',color:'var(--fg-muted)',display:'inline-flex',gap:4,alignItems:'center' }}>
+            <Icon name="people" size={13}/> {guide.listeners} connected
+          </span>
+        </div>
+
+        {/* Mic orb — tap to mute/unmute */}
+        <div style={{ display:'flex',flexDirection:'column',alignItems:'center',padding:'28px 20px 16px' }}>
+          <div style={{ position:'relative',width:200,height:200 }}>
+            {onAir && [1,2,3].map(i => (
+              <div key={i} style={{ position:'absolute',inset:0,borderRadius:'50%',border:'1px solid var(--accent)',opacity:.35,animation:`ring 2.4s ${i*.5}s ease-out infinite` }}/>
+            ))}
+            <button onClick={() => { setMuted(!muted); guide.setMuted(!muted); }} style={{
+              position:'absolute',inset:0,borderRadius:'50%',cursor:'pointer',
+              background:onAir?'var(--accent)':'var(--surface)',
+              border:onAir?'none':'1px solid var(--line-strong)',
+              color:onAir?'#06120A':'var(--fg)',
+              display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,
+              transition:'all 160ms',
+            }}>
+              <Icon name={onAir?'mic':'micOff'} size={48} sw={1.3}/>
+              <span className="mono" style={{ fontSize:10,letterSpacing:'.2em' }}>
+                {onAir ? t.bc_mute.toUpperCase() : t.bc_unmute.toUpperCase()}
+              </span>
+            </button>
+          </div>
+
+          {/* Live VU meter driven by real audio level */}
+          <div style={{ width:'100%',maxWidth:300,marginTop:24 }}>
+            <LevelMeter level={onAir ? guide.level : 0} segments={32}/>
+            <div className="mono" style={{ display:'flex',justifyContent:'space-between',marginTop:6,fontSize:9,color:'var(--fg-faint)',letterSpacing:'.1em' }}>
+              <span>-∞</span><span>-24</span><span>-12</span><span>-6</span><span>0dB</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ padding:'0 20px 16px' }}>
+          <div className="grid-3">
+            <StatCell label={t.bc_listeners} value={guide.listeners} onClick={() => setScreen('listeners')}/>
+            <StatCell label="Codec" value="Opus"/>
+            <StatCell label="Mode" value="P2P"/>
+          </div>
+        </div>
+      </div>
+
+      <div className="bottom-bar" style={{ display:'flex',gap:8,alignItems:'center' }}>
+        {/* Local recording via MediaRecorder — saves as WebM to device */}
+        <button onClick={guide.toggleRecording} style={{
+          flex:1,padding:'12px',borderRadius:12,cursor:'pointer',
+          border:`1px solid ${guide.recording?'var(--danger)':'var(--line)'}`,
+          background:guide.recording?'var(--danger-bg)':'transparent',
+          color:guide.recording?'var(--danger)':'var(--fg)',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+          fontFamily:'var(--sans)',fontSize:14,fontWeight:500,
+        }}>
+          <Icon name="record" size={10}/>
+          {guide.recording ? t.bc_rec_on : t.bc_record}
+        </button>
+        <button className="btn btn-ghost btn-md" onClick={() => setScreen('listeners')}>
+          <Icon name="people" size={16}/> {guide.listeners}
+        </button>
+        <button className="btn btn-danger btn-md" onClick={() => { guide.stop(); setScreen('history'); }}>
+          {t.bc_end}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GuideListeners({ t, guide, tour, setScreen }) {
+  // Simulate listener list based on count (real identifiers would need data channels)
+  const names = ['Marco R.','Ana C.','Kenji T.','Sophie L.','Dieter W.','Priya N.','Luca M.','Elena G.','Oskar B.','Yuki I.','Jessica A.','Omar F.','Chiara V.','Henrik S.','Nia O.','Paolo D.'];
+  const devices = ['iPhone 15','Pixel 8','Galaxy S23','iPhone 14','Pixel 7'];
+  const list = Array.from({ length: guide.listeners }).map((_, i) => ({
+    id: i, name: names[i % names.length] + (i >= names.length ? ' ' + (i+1) : ''),
+    initials: (names[i%names.length].split(' ').map(p=>p[0]).join('')).toUpperCase(),
+    device: devices[i % devices.length], signal: 0.5 + ((i*7)%50)/100,
+  }));
+  return (
+    <div className="screen ani">
+      <TopBar title={t.ls_title} subtitle={`${guide.listeners} / ${tour.capacity}`}
+        left={<IconBtn name="chevL" onClick={() => setScreen('broadcast')}/>}/>
+      <div className="content" style={{ padding:'12px 20px 40px' }}>
+        {list.length === 0 ? (
+          <div className="center" style={{ marginTop:60,gap:12 }}>
+            <Icon name="people" size={40} color="var(--fg-faint)"/>
+            <p style={{ color:'var(--fg-muted)',fontSize:14 }}>Waiting for listeners…</p>
+          </div>
+        ) : (
+          <div className="card" style={{ overflow:'hidden' }}>
+            {list.map((l, i) => (
+              <div key={l.id} className="row" style={{ borderBottom:i===list.length-1?'none':'1px solid var(--line)' }}>
+                <div style={{ width:32,height:32,borderRadius:10,background:'var(--surface-alt)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--mono)',fontSize:11 }}>{l.initials}</div>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <div style={{ fontSize:14,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{l.name}</div>
+                  <div className="mono" style={{ fontSize:10,color:'var(--fg-muted)' }}>{l.device}</div>
+                </div>
+                <div style={{ width:36,height:10 }}><LevelMeter level={l.signal} segments={5}/></div>
+                <span style={{ width:6,height:6,borderRadius:'50%',background:'var(--accent)' }}/>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GuideAudio({ t, tour, setTour, setScreen }) {
+  return (
+    <div className="screen ani">
+      <TopBar title={t.au_title} left={<IconBtn name="chevL" onClick={() => setScreen('broadcast')}/>}/>
+      <div className="content" style={{ padding:'12px 20px 40px' }}>
+        <div className="gap-20">
+          <div className="card card-pad gap-16">
+            <Field label={t.au_input}>
+              <Segment value={tour.input || 'built'}
+                options={[['built','Built-in'],['wired','Wired'],['bt','Bluetooth']]}
+                onChange={v => setTour(s => ({ ...s, input:v }))}/>
+            </Field>
+            <div style={{ height:36,display:'flex',alignItems:'center',gap:8 }}>
+              <Icon name="mic" size={14} color="var(--fg-muted)"/>
+              <WaveformBars live count={42} height={28} seed={11} color="var(--accent)"/>
+            </div>
+          </div>
+          <div className="card card-pad gap-16">
+            <p style={{ fontSize:13,color:'var(--fg-muted)',lineHeight:1.5 }}>
+              Whispy uses the browser's native Opus codec over WebRTC. Audio quality settings are negotiated automatically with each listener for best compatibility.
+            </p>
+            <div style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--ground)',borderRadius:10 }}>
+              <Icon name="check" size={16} color="var(--accent)" sw={2}/>
+              <span style={{ fontSize:13 }}>Echo cancellation · Noise suppression · Auto-gain</span>
+            </div>
+          </div>
+          <div className="card" style={{ overflow:'hidden' }}>
+            {[[t.au_noise,'wave','noise'],[t.au_agc,'signal','agc',true]].map(([label,icon,key,last]) => (
+              <div key={key} style={{ display:'flex',alignItems:'center',gap:12,padding:'13px 14px',borderBottom:last?'none':'1px solid var(--line)' }}>
+                <Icon name={icon} size={18} color="var(--fg-muted)"/>
+                <span style={{ flex:1,fontSize:14 }}>{label}</span>
+                <Switch on={tour[key] !== false} onChange={v => setTour(s => ({ ...s,[key]:v }))}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuideHistory({ t, setScreen }) {
+  const tours = [
+    { name:'Vatican Museums', date:'Today',    dur:'1:42', listeners:18, lang:'IT' },
+    { name:'Colosseum & Forum', date:'Yesterday', dur:'2:08', listeners:24, lang:'EN' },
+    { name:'Borghese Gallery', date:'Apr 19',  dur:'0:54', listeners:12, lang:'EN' },
+    { name:'Trastevere food tour', date:'Apr 17', dur:'3:20', listeners:16, lang:'IT' },
+  ];
+  return (
+    <div className="screen ani">
+      <div style={{ padding:'20px 20px 8px',display:'flex',alignItems:'center' }}><Logo size={18}/></div>
+      <div className="content" style={{ padding:'0 20px 40px' }}>
+        <div style={{ fontSize:28,fontWeight:600,letterSpacing:'-.02em',padding:'8px 0 16px' }}>{t.his_title}</div>
+        <button className="btn btn-primary btn-lg" style={{ marginBottom:20 }} onClick={() => setScreen('create')}>
+          <div style={{ width:36,height:36,borderRadius:10,background:'var(--accent)',color:'#06120A',display:'inline-flex',alignItems:'center',justifyContent:'center' }}>
+            <Icon name="mic" size={18}/>
+          </div>
+          <div style={{ flex:1,textAlign:'left' }}>
+            <div>{t.his_new}</div>
+            <div style={{ fontSize:12,opacity:.7 }}>QR in seconds</div>
+          </div>
+          <Icon name="arrowR" size={18}/>
+        </button>
+        <div className="label" style={{ padding:'4px 0 10px' }}>PAST · {tours.length}</div>
+        <div className="card" style={{ overflow:'hidden' }}>
+          {tours.map((x,i) => (
+            <div key={i} className="row" style={{ borderBottom:i===tours.length-1?'none':'1px solid var(--line)' }}>
+              <div style={{ flex:1,minWidth:0 }}>
+                <div style={{ fontSize:14,fontWeight:500 }}>{x.name}</div>
+                <div className="mono" style={{ fontSize:10,color:'var(--fg-muted)' }}>{x.date.toUpperCase()} · {x.dur} · {x.lang}</div>
+              </div>
+              <div style={{ display:'inline-flex',alignItems:'center',gap:4,color:'var(--fg-muted)',fontFamily:'var(--mono)',fontSize:11 }}>
+                <Icon name="people" size={12}/> {x.listeners}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tourist screens ──────────────────────────────────────────────
+
+function TouristLanding({ t, onScan }) {
+  return (
+    <div className="screen ani">
+      <div style={{ padding:'28px 20px 0' }}><Logo size={20}/></div>
+      <div className="content" style={{ padding:'28px 20px 40px',display:'flex',flexDirection:'column' }}>
+        <div style={{ height:200,border:'1px dashed var(--line-strong)',borderRadius:20,background:'var(--surface)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:28,position:'relative',overflow:'hidden' }}>
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            {[['M10 30 V10 H30'],['M110 10 H130 V30'],['M130 110 V130 H110'],['M30 130 H10 V110']].map(([d],i)=>(
+              <path key={i} d={d} stroke="var(--accent)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+            ))}
+            <g transform="translate(42 42)"><Icon name="qr" size={56} color="var(--fg)" sw={1.3}/></g>
+          </svg>
+        </div>
+        <div style={{ fontSize:32,fontWeight:600,letterSpacing:'-.035em',lineHeight:1.08,marginBottom:14 }}>{t.ts_title}</div>
+        <div style={{ fontSize:15,color:'var(--fg-muted)',lineHeight:1.5,marginBottom:36 }}>{t.ts_sub}</div>
+        <button className="btn btn-accent btn-lg" onClick={onScan}>
+          <Icon name="scan" size={18}/> {t.ts_scan}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TouristSetup({ t, vol, setVol, listenLang, setListenLang, onReady, onBack }) {
+  return (
+    <div className="screen ani">
+      <TopBar title={t.ts_setup} left={onBack && <IconBtn name="chevL" onClick={onBack}/>}/>
+      <div className="content" style={{ padding:'12px 20px 40px' }}>
+        <div className="gap-20">
+          <div className="card card-pad row-flex" style={{ gap:14 }}>
+            <div style={{ width:48,height:48,borderRadius:14,flexShrink:0,background:'var(--accent-bg)',color:'var(--accent)',display:'inline-flex',alignItems:'center',justifyContent:'center' }}>
+              <Icon name="headset" size={24}/>
+            </div>
+            <div>
+              <div style={{ fontSize:15,fontWeight:500 }}>{t.ts_headset}</div>
+              <div style={{ fontSize:12,color:'var(--fg-muted)',marginTop:2 }}>Headphones recommended for best experience</div>
+            </div>
+          </div>
+
+          <Field label={t.ts_lang}>
+            <div className="card" style={{ overflow:'hidden' }}>
+              {[['en','English'],['it','Italiano'],['es','Español']].map(([val,label],i,arr) => (
+                <button key={val} onClick={() => setListenLang(val)} style={{ display:'flex',alignItems:'center',gap:12,width:'100%',padding:'13px 14px',background:'transparent',border:'none',borderBottom:i===arr.length-1?'none':'1px solid var(--line)',cursor:'pointer',textAlign:'left',color:'var(--fg)' }}>
+                  <div style={{ width:18,height:18,borderRadius:'50%',border:`1.5px solid ${listenLang===val?'var(--accent)':'var(--line-strong)'}`,background:listenLang===val?'var(--accent)':'transparent',display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                    {listenLang===val && <div style={{ width:8,height:8,borderRadius:'50%',background:'#06120A' }}/>}
+                  </div>
+                  <span style={{ fontSize:14 }}>{label}</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label={t.ts_vol} value={`${vol}%`}>
+            <input type="range" min="0" max="100" value={vol}
+              onChange={e => setVol(+e.target.value)} style={{ accentColor:'var(--accent)' }}/>
+            <div style={{ marginTop:10,padding:'10px 12px',borderRadius:12,background:'var(--surface)',border:'1px solid var(--line)',display:'flex',alignItems:'center',gap:10 }}>
+              <Icon name="volume" size={16} color="var(--fg-muted)"/>
+              <WaveformBars count={32} height={20} seed={8} color="var(--accent)" live/>
+            </div>
+          </Field>
+
+          {/* The "I'm ready" button acts as the required user gesture for audio autoplay on iOS */}
+          <button className="btn btn-accent btn-lg" onClick={onReady}>
+            {t.ts_ready} <Icon name="arrowR" size={16}/>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TouristJoining({ t, tourist, peerId }) {
+  const steps = [t.ts_step1, t.ts_step2, t.ts_step3];
+  const step   = tourist.status === 'connecting' ? 1 : tourist.status === 'live' ? 3 : 0;
+  return (
+    <div className="screen ani center" style={{ padding:'32px 20px' }}>
+      <div style={{ textAlign:'center',marginBottom:40 }}>
+        <div style={{ width:80,height:80,borderRadius:'50%',background:'var(--accent-bg)',color:'var(--accent)',display:'inline-flex',alignItems:'center',justifyContent:'center',position:'relative',margin:'0 auto 24px' }}>
+          <Icon name="wifi" size={32}/>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ position:'absolute',inset:0,borderRadius:'50%',border:'1px solid var(--accent)',opacity:.3,animation:`ring 2s ${i*.4}s ease-out infinite` }}/>
+          ))}
+        </div>
+        <div style={{ fontSize:20,fontWeight:600,letterSpacing:'-.02em' }}>{t.ts_joining}</div>
+        <div className="mono" style={{ fontSize:11,color:'var(--fg-muted)',letterSpacing:'.1em',marginTop:6 }}>
+          {peerId ? peerId.slice(0,16)+'…' : ''}
+        </div>
+      </div>
+      <div style={{ maxWidth:300,width:'100%' }}>
+        {steps.map((label, i) => (
+          <div key={i} style={{ display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:i<2?'1px solid var(--line)':'none' }}>
+            <div style={{ width:22,height:22,borderRadius:'50%',border:`1.5px solid ${i<step?'var(--accent)':i===step?'var(--fg)':'var(--line)'}`,background:i<step?'var(--accent)':'transparent',display:'inline-flex',alignItems:'center',justifyContent:'center',color:'#06120A',flexShrink:0 }}>
+              {i<step && <Icon name="check" size={12} sw={2.5}/>}
+              {i===step && <div style={{ width:8,height:8,borderRadius:'50%',background:'var(--fg)',animation:'pulse 1s ease-in-out infinite' }}/>}
+            </div>
+            <span style={{ flex:1,fontSize:14,color:i<=step?'var(--fg)':'var(--fg-muted)' }}>{label}</span>
+            {i<step && <span className="mono" style={{ fontSize:10,color:'var(--accent)',letterSpacing:'.1em' }}>OK</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TouristListen({ t, tourist, vol, setVol, setScreen }) {
+  // Sync volume changes to the Audio element
+  useEffect(() => { tourist.setVolume(vol); }, [vol]);
+
+  if (tourist.status === 'lost' || tourist.status === 'not-found') {
+    return (
+      <div className="screen ani center" style={{ padding:'32px 20px', textAlign:'center' }}>
+        <div style={{ width:88,height:88,borderRadius:'50%',background:'var(--danger-bg)',color:'var(--danger)',display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:20 }}>
+          <Icon name="wifiOff" size={36}/>
+        </div>
+        <div style={{ fontSize:22,fontWeight:600,letterSpacing:'-.02em' }}>{tourist.status==='not-found' ? t.not_found.split('.')[0] : t.ts_lost}</div>
+        <div style={{ marginTop:10,fontSize:14,color:'var(--fg-muted)',maxWidth:280 }}>
+          {tourist.status==='not-found' ? t.not_found : t.ts_lost_sub}
+        </div>
+        <button className="btn btn-primary btn-lg" style={{ marginTop:32,maxWidth:280 }} onClick={() => tourist.join()}>
+          {t.ts_retry}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen ani">
+      <TopBar
+        left={<IconBtn name="info" onClick={() => setScreen('info')}/>}
+        title={_params.get('name') ? decodeURIComponent(_params.get('name')) : 'Tour'}
+        subtitle={`${t.ts_guide.toUpperCase()}: MARIA R.`}/>
+
+      <div className="content" style={{ padding:'8px 20px 16px' }}>
+        {/* Tap-to-play prompt for iOS autoplay restriction */}
+        {tourist.needsTap && (
+          <button className="btn btn-accent btn-lg" style={{ marginBottom:16 }} onClick={tourist.unlockAudio}>
+            <Icon name="volume" size={18}/> {t.ts_tap}
+          </button>
+        )}
+
+        <div style={{ marginBottom:20,padding:'10px 14px',borderRadius:14,display:'flex',alignItems:'center',gap:10,background:'var(--accent-bg)',border:'1px solid var(--accent)' }}>
+          <Pill kind="live">RECEIVING</Pill>
+          <span style={{ flex:1 }}/>
+          <span className="mono" style={{ fontSize:10,letterSpacing:'.1em',color:'var(--accent)',display:'inline-flex',gap:4,alignItems:'center' }}>
+            <Icon name="signal" size={12}/> {t.strong}
+          </span>
+        </div>
+
+        {/* Live waveform (decorative — real incoming audio doesn't expose level to Web Audio easily) */}
+        <div style={{ position:'relative',height:180,borderRadius:20,background:'var(--surface)',border:'1px solid var(--line)',padding:20,overflow:'hidden',marginBottom:24 }}>
+          <div className="mono" style={{ position:'absolute',top:14,left:16,fontSize:10,color:'var(--fg-muted)',letterSpacing:'.14em' }}>INCOMING STREAM</div>
+          <div className="mono" style={{ position:'absolute',top:14,right:16,fontSize:10,color:'var(--fg-muted)',letterSpacing:'.14em' }}>OPUS · WebRTC</div>
+          <div style={{ position:'absolute',inset:'44px 20px',display:'flex',alignItems:'center' }}>
+            <WaveformBars live count={48} height={92} seed={42} color="var(--accent)"/>
+          </div>
+          <div className="mono" style={{ position:'absolute',bottom:14,left:16,right:16,display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--fg-faint)',letterSpacing:'.1em' }}>
+            <span>P2P</span><span>LOCAL NETWORK</span><span>LOW LATENCY</span>
+          </div>
+        </div>
+
+        <Field label={t.ts_vol} value={`${vol}%`}>
+          <input type="range" min="0" max="100" value={vol}
+            onChange={e => setVol(+e.target.value)} style={{ accentColor:'var(--accent)' }}/>
+        </Field>
+      </div>
+
+      <div className="bottom-bar">
+        <button className="btn btn-ghost btn-lg" onClick={() => { tourist.leave(); setScreen('tourist-landing'); }}>
+          {t.ts_leave}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TouristInfo({ t, setScreen }) {
+  const tourName = _params.get('name') ? decodeURIComponent(_params.get('name')) : 'Tour';
+  const stops = [
+    { n:1, name:'Cortile della Pigna',       dur:'12 min', done:true },
+    { n:2, name:'Galleria dei Candelabri',    dur:'18 min', done:true },
+    { n:3, name:'Sistine Chapel',             dur:'25 min', done:false, current:true },
+    { n:4, name:'Stanze di Raffaello',        dur:'20 min', done:false },
+    { n:5, name:"St. Peter's Basilica",       dur:'30 min', done:false },
+  ];
+  return (
+    <div className="screen ani">
+      <TopBar title={t.ts_about} left={<IconBtn name="chevL" onClick={() => setScreen('listen')}/>}/>
+      <div className="content" style={{ padding:'0 20px 40px' }}>
+        <div className="card card-pad gap-12" style={{ marginBottom:0 }}>
+          <div style={{ fontSize:20,fontWeight:600,letterSpacing:'-.02em' }}>{tourName}</div>
+          <div className="grid-3">
+            <InfoCell label={t.ts_guide_n} value="Maria R."/>
+            <InfoCell label={t.ts_started} value="32m"/>
+            <InfoCell label={t.ts_lang_lbl} value="IT"/>
+          </div>
+        </div>
+        <div className="label" style={{ padding:'18px 0 10px' }}>{t.ts_stops} · {stops.length}</div>
+        <div className="card" style={{ overflow:'hidden' }}>
+          {stops.map((s,i) => (
+            <div key={s.n} style={{ display:'flex',alignItems:'center',gap:12,padding:14,borderBottom:i===stops.length-1?'none':'1px solid var(--line)',background:s.current?'var(--accent-bg)':'transparent' }}>
+              <div style={{ width:28,height:28,borderRadius:'50%',border:`1.5px solid ${s.done||s.current?'var(--accent)':'var(--line)'}`,background:s.done?'var(--accent)':'transparent',color:s.done?'#06120A':s.current?'var(--accent)':'var(--fg-muted)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--mono)',fontSize:11,flexShrink:0 }}>
+                {s.done ? <Icon name="check" size={14} sw={2.5}/> : s.n}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:14,fontWeight:s.current?600:500 }}>{s.name}</div>
+                <div className="mono" style={{ fontSize:10,color:'var(--fg-muted)' }}>
+                  {s.dur.toUpperCase()}{s.current?' · NOW':s.done?' · DONE':' · UPCOMING'}
+                </div>
+              </div>
+              {s.current && <Icon name="wave" size={16} color="var(--accent)"/>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────
+
+function App() {
+  const [lang, setLang] = useState(BROWSER_LANG);
+  const t = STR[lang] || STR.en;
+
+  // Persistent tour configuration (guide)
+  const [tour, setTour] = useState({
+    name: 'Vatican Museums — Afternoon',
+    lang: 'it', capacity: 30,
+    accessOn: false,
+    accessCode: String(Math.floor(1000 + Math.random() * 9000)),
+    input: 'wired', noise: true, agc: true,
+  });
+
+  // Mute state lives in App so it persists when navigating between screens
+  const [muted, setMuted] = useState(false);
+
+  // Tourist state
+  const [vol, setVol]             = useState(80);
+  const [listenLang, setListenLang] = useState(BROWSER_LANG);
+
+  // Screen router
+  const [screen, setScreen] = useState(IS_TOURIST ? 'tourist-setup' : 'landing');
+
+  // WebRTC hooks (instantiated once, live for the session)
+  const guide   = useGuidePeer();
+  const tourist = useTouristPeer(JOIN_PEER_ID);
+
+  // Navigate tourist automatically when connection changes state
+  useEffect(() => {
+    if (screen === 'tourist-joining') {
+      if (tourist.status === 'live')      setScreen('listen');
+      if (tourist.status === 'lost' || tourist.status === 'not-found') setScreen('listen');
+    }
+  }, [tourist.status, screen]);
+
+  const goScreen = s => setScreen(s);
+
+  switch (screen) {
+    // ── Guide ──────────────────────────────────────────────────────
+    case 'landing':
+      return <GuideLanding t={t} lang={lang} setLang={setLang}
+               onGuide={() => goScreen('create')} onTourist={() => goScreen('tourist-landing')}/>;
+    case 'create':
+      return <GuideCreate t={t} tour={tour} setTour={setTour} guide={guide}
+               onBack={() => { guide.stop(); goScreen('landing'); }} onNext={() => goScreen('qr')}/>;
+    case 'qr':
+      return <GuideQR t={t} tour={tour} guide={guide}
+               onBack={() => goScreen('create')} onNext={() => goScreen('broadcast')}/>;
+    case 'broadcast':
+      return <GuideBroadcast t={t} tour={tour} guide={guide} muted={muted} setMuted={setMuted} setScreen={goScreen}/>;
+    case 'listeners':
+      return <GuideListeners t={t} guide={guide} tour={tour} setScreen={goScreen}/>;
+    case 'audio':
+      return <GuideAudio t={t} tour={tour} setTour={setTour} setScreen={goScreen}/>;
+    case 'history':
+      return <GuideHistory t={t} setScreen={goScreen}/>;
+
+    // ── Tourist ────────────────────────────────────────────────────
+    case 'tourist-landing':
+      return <TouristLanding t={t} onScan={() => goScreen('tourist-setup')}/>;
+    case 'tourist-setup':
+      return <TouristSetup t={t} vol={vol} setVol={setVol}
+               listenLang={listenLang} setListenLang={setListenLang}
+               onBack={IS_TOURIST ? null : () => goScreen('landing')}
+               onReady={() => { tourist.join(); goScreen('tourist-joining'); }}/>;
+    case 'tourist-joining':
+      return <TouristJoining t={t} tourist={tourist} peerId={JOIN_PEER_ID}/>;
+    case 'listen':
+      return <TouristListen t={t} tourist={tourist} vol={vol} setVol={setVol} setScreen={goScreen}/>;
+    case 'info':
+      return <TouristInfo t={t} setScreen={goScreen}/>;
+
+    default:
+      return <GuideLanding t={t} lang={lang} setLang={setLang}
+               onGuide={() => goScreen('create')} onTourist={() => goScreen('tourist-landing')}/>;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
