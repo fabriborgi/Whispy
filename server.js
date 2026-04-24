@@ -1,32 +1,66 @@
-// Whispy signaling server — wraps PeerJS's official peer-server npm package.
-// Deploy free on Render (render.com) or Fly.io — no paid tier needed.
+// Whispy — local signaling + static server
 //
-// After deploy, set window.WHISPY_PEER_HOST in index.html to your server URL
-// OR add a <script> tag before the app:
-//   <script>window.WHISPY_PEER_HOST = 'https://your-app.onrender.com';</script>
+// Designed for guides who have a laptop or Raspberry Pi on the hotspot.
+// Tourists connect to the guide's Wi-Fi, open http://<local-ip>:9000 —
+// everything (app + signaling) is served locally. Zero internet needed.
+//
+// Usage:
+//   npm install
+//   npm start
+//
+// The server prints the local IP address to share with tourists.
+// Set WHISPY_PORT env var to change the port (default: 9000).
+//
+// For cloud deploy on Render/Fly.io, this server also works — in that case
+// tourists use the internet for signaling but audio is still P2P on LAN.
 
-import { PeerServer } from 'peer';
+import express from 'express';
+import { ExpressPeerServer } from 'peer';
+import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { networkInterfaces } from 'os';
 
-const PORT = parseInt(process.env.PORT || '9000', 10);
+const PORT = parseInt(process.env.WHISPY_PORT || process.env.PORT || '9000', 10);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const server = PeerServer({
-  port: PORT,
-  path: '/',
-  // Allow everyone — tourists and guides connect dynamically.
-  // PeerJS cloud has no IP auth either; this matches that model.
-  allow_discovery: false,
-  corsOptions: {
-    origin: '*',
-    methods: ['GET', 'POST'],
+const app = express();
+const server = http.createServer(app);
+
+// ── PeerJS signaling (/peerjs) ─────────────────────────────────────────
+const peerServer = ExpressPeerServer(server, { path: '/' });
+app.use('/peerjs', peerServer);
+
+peerServer.on('connection', c => console.log(`  ✓ peer connected:    ${c.getId()}`));
+peerServer.on('disconnect', c => console.log(`  ✗ peer disconnected: ${c.getId()}`));
+
+// ── Static files ───────────────────────────────────────────────────────
+app.use(express.static(__dirname, {
+  // Service Worker requires this header to control the root scope
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('sw.js')) {
+      res.setHeader('Service-Worker-Allowed', '/');
+    }
+    // Always re-check for updates; CDN caching in sw.js handles the heavy lifting
+    res.setHeader('Cache-Control', 'no-cache');
   },
-});
+}));
 
-server.on('connection', (client) => {
-  console.log(`[whispy] peer connected: ${client.getId()}`);
-});
+// SPA fallback — ?join=<peerId> links must still serve index.html
+app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-server.on('disconnect', (client) => {
-  console.log(`[whispy] peer disconnected: ${client.getId()}`);
-});
+// ── Start ──────────────────────────────────────────────────────────────
+server.listen(PORT, '0.0.0.0', () => {
+  const nets = networkInterfaces();
+  const localIPs = Object.values(nets)
+    .flat()
+    .filter(a => a.family === 'IPv4' && !a.internal)
+    .map(a => a.address);
 
-console.log(`[whispy] signaling server listening on :${PORT}`);
+  console.log('\n🎙  Whispy local server ready\n');
+  if (localIPs.length) {
+    localIPs.forEach(ip => console.log(`  → http://${ip}:${PORT}   ← share this with tourists`));
+  }
+  console.log(`  → http://localhost:${PORT}   (this device only)`);
+  console.log('\n  Tourists: join your Wi-Fi → open the URL above → done.\n');
+});

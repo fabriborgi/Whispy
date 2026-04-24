@@ -1,7 +1,7 @@
 {
   "name": "whispy-server",
   "version": "1.0.0",
-  "description": "Whispy PeerJS signaling server — self-hosted, zero infra cost",
+  "description": "Whispy — local signaling + static server. Zero infra cost.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "express": "^4.21.2",
     "peer": "*"
   }
 }

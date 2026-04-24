@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="Whispy — Tour guide radio. Scan QR to listen instantly." />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
   <title>Whispy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -648,14 +650,23 @@
       { urls: 'stun:stun.cloudflare.com:3478' },
     ];
 
-    // PeerJS server config. Default: PeerJS cloud (fine for prototyping / small tours).
-    // For self-hosting set window.WHISPY_PEER_HOST = 'https://whispy-slg2.onrender.com'
-    // before loading this script.
+    // PeerJS server config.
+    // Priority:
+    //   1. window.WHISPY_PEER_HOST — explicit override (e.g. cloud deploy)
+    //   2. Local IP auto-detect — if served from 192.168.x.x / 10.x.x.x (local server),
+    //      use the same host:port at /peerjs (zero internet needed)
+    //   3. PeerJS cloud default — fallback for GitHub Pages / Cloudflare Pages deploys
     function peerCfg() {
       const h = window.WHISPY_PEER_HOST;
       if (h) {
         const u = new URL(h);
-        return { host: u.hostname, port: u.port || 443, path: '/', secure: u.protocol === 'https:', config: { iceServers: ICE_SERVERS } };
+        return { host: u.hostname, port: parseInt(u.port) || (u.protocol === 'https:' ? 443 : 80), path: '/peerjs', secure: u.protocol === 'https:', config: { iceServers: ICE_SERVERS } };
+      }
+      // Auto-detect: if accessed via local IP (guide's local server), use it for signaling too
+      const { hostname, port } = window.location;
+      const isLocal = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+      if (isLocal && port) {
+        return { host: hostname, port: parseInt(port), path: '/peerjs', secure: false, config: { iceServers: ICE_SERVERS } };
       }
       return { config: { iceServers: ICE_SERVERS } }; // PeerJS cloud default
     }
@@ -673,6 +684,10 @@
         qr_title: 'Scan to join', qr_sub: 'Show this to your group or project it on screen.',
         qr_network: 'Network', qr_pwd: 'Password', qr_open: 'Open', qr_listeners: 'listening',
         qr_enter: 'Enter broadcast',
+        qr_hotspot_title: 'How to connect tourists',
+        qr_step1: 'Enable Personal Hotspot on your phone (or use local venue Wi-Fi).',
+        qr_step2: 'Ask tourists to join your Wi-Fi network.',
+        qr_step3: 'Show this QR — audio streams P2P and uses no mobile data.',
         bc_on_air: 'ON AIR', bc_muted: 'MUTED',
         bc_mute: 'Mute', bc_unmute: 'Un-mute',
         bc_record: 'Record', bc_rec_on: 'Recording',
@@ -712,6 +727,10 @@
         qr_title: 'Scansiona per unirti', qr_sub: 'Mostra al gruppo o proietta su uno schermo.',
         qr_network: 'Rete', qr_pwd: 'Password', qr_open: 'Aperto', qr_listeners: 'in ascolto',
         qr_enter: 'Entra in trasmissione',
+        qr_hotspot_title: 'Come connettere i turisti',
+        qr_step1: 'Attiva l\'Hotspot personale sul tuo telefono (o usa il Wi-Fi del posto).',
+        qr_step2: 'Chiedi ai turisti di connettersi alla tua rete Wi-Fi.',
+        qr_step3: 'Mostra questo QR — l\'audio è P2P e non consuma dati mobili.',
         bc_on_air: 'IN ONDA', bc_muted: 'MUTO',
         bc_mute: 'Muto', bc_unmute: 'Attiva',
         bc_record: 'Registra', bc_rec_on: 'In registrazione',
@@ -1265,7 +1284,21 @@
         <div className="screen ani">
           <TopBar title={t.qr_title} left={<IconBtn name="chevL" onClick={onBack} />} />
           <div className="content" style={{ padding: '0 20px 40px' }}>
-            <p style={{ fontSize: 13, color: 'var(--fg-muted)', marginBottom: 20, textAlign: 'center' }}>{t.qr_sub}</p>
+
+            {/* Wi-Fi hotspot setup steps */}
+            <div style={{ margin: '14px 0 16px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: '12px 14px' }}>
+              <div className="label" style={{ marginBottom: 10 }}>{t.qr_hotspot_title}</div>
+              {[t.qr_step1, t.qr_step2, t.qr_step3].map((step, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: i < 2 ? 8 : 0 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-bg)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    {i + 1}
+                  </div>
+                  <span style={{ fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.45 }}>{step}</span>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--fg-muted)', marginBottom: 12, textAlign: 'center' }}>{t.qr_sub}</p>
 
             <div className="card card-pad gap-16">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1811,6 +1844,17 @@
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+
+  <!-- PWA Service Worker registration — caches app shell for offline use -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+          // SW registration fails on file:// or in some private-browsing modes — that's fine
+        });
+      });
+    }
   </script>
 </body>
 

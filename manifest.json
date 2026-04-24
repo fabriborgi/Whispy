@@ -1,0 +1,20 @@
+{
+  "name": "Whispy",
+  "short_name": "Whispy",
+  "description": "Tour guide radio — scan QR to listen instantly, no download needed",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0E0F12",
+  "theme_color": "#0E0F12",
+  "lang": "en",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
